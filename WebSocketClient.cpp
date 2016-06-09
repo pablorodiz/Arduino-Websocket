@@ -99,14 +99,19 @@ bool WebSocketClient::analyzeRequest() {
         temp += (char)bite;
 
         if ((char)bite == '\n') {
+			if(temp.startsWith("\r\n")) {
 #ifdef DEBUGGING
-            Serial.print("Got Header: " + temp);
-#endif
-            if (!foundupgrade && temp.startsWith("Upgrade: websocket")) {
-                foundupgrade = true;
-            } else if (temp.startsWith("Sec-WebSocket-Accept: ")) {
-                serverKey = temp.substring(22,temp.length() - 2); // Don't save last CR+LF
-            }
+				Serial.println("End of headers");
+#endif			
+				break;
+			} else if (!foundupgrade && temp.startsWith("Upgrade: websocket")) {
+				foundupgrade = true;
+			} else if (temp.startsWith("Sec-WebSocket-Accept: ")) {
+				serverKey = temp.substring(22,temp.length() - 2); // Don't save last CR+LF
+			} 
+#ifdef DEBUGGING
+			Serial.print("Got Header: " + temp);
+#endif			
             temp = "";		
         }
 
