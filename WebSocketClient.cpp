@@ -256,8 +256,10 @@ bool WebSocketClient::getData(String& data, uint8_t *opcode) {
 
 void WebSocketClient::sendData(const char *str, uint8_t opcode) {
 #ifdef DEBUGGING
-    Serial.print(F("Sending data: "));
-    Serial.println(str);
+    if((char)str[0]!=0) { 
+		Serial.print(F("Sending data: "));
+		Serial.println(str);
+	}	
 #endif
     if (socket_client->connected()) {
         sendEncodedData(str, opcode);       
@@ -266,8 +268,10 @@ void WebSocketClient::sendData(const char *str, uint8_t opcode) {
 
 void WebSocketClient::sendData(String str, uint8_t opcode) {
 #ifdef DEBUGGING
-    Serial.print(F("Sending data: "));
-    Serial.println(str);
+    if((char)str[0]!=0) { 
+		Serial.print(F("Sending data: "));
+		Serial.println(str);
+	}	
 #endif
     if (socket_client->connected()) {
         sendEncodedData(str, opcode);
