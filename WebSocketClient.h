@@ -89,7 +89,8 @@ public:
     // Handle connection requests to validate and process/refuse
     // connections.
     bool handshake(Client &client);
-    
+    //Check if socket os connected
+	int connected();
     // Get data off of the stream
     bool getData(String& data, uint8_t *opcode = NULL);
 

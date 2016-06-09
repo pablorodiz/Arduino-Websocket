@@ -260,6 +260,10 @@ void WebSocketClient::disconnectStream() {
     socket_client->stop();
 }
 
+int WebSocketClient::connected(void) {	
+	return socket_client->connected();
+}
+
 bool WebSocketClient::getData(String& data, uint8_t *opcode) {
     return handleStream(data, opcode);
 }    
