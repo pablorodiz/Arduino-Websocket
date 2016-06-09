@@ -100,6 +100,7 @@ public:
     char *path;
     char *host;
     char *protocol;
+	static char *headers;
 
 private:
     Client *socket_client;

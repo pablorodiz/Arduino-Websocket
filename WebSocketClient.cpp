@@ -6,6 +6,7 @@
 #include "sha1.h"
 #include "base64.h"
 
+char *WebSocketClient::headers = NULL;
 
 bool WebSocketClient::handshake(Client &client) {
 
@@ -73,6 +74,10 @@ bool WebSocketClient::analyzeRequest() {
     socket_client->print(F("Host: "));
     socket_client->print(host);
     socket_client->print(CRLF); 
+	if(headers) {
+		socket_client->print(headers);
+		socket_client->print(CRLF);
+	}	
     socket_client->print(F("Sec-WebSocket-Key: "));
     socket_client->print(key);
     socket_client->print(CRLF);
