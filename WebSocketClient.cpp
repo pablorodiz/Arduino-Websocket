@@ -301,34 +301,34 @@ int WebSocketClient::timedRead() {
 }
 
 void WebSocketClient::sendEncodedData(char *str, uint8_t opcode) {
-    uint8_t mask[4];
+    uint8_t header[8];
     int size = strlen(str);
+	int i = 0;
 
     // Opcode; final fragment
-    socket_client->write(opcode | WS_FIN);
+	header[i++] = opcode | WS_FIN;
+    //socket_client->write(opcode | WS_FIN);
 
     // NOTE: no support for > 16-bit sized messages
     if (size > 125) {
-        socket_client->write(WS_SIZE16 | WS_MASK);
-        socket_client->write((uint8_t) (size >> 8));
-        socket_client->write((uint8_t) (size & 0xFF));
+		header[i++] = WS_SIZE16 | WS_MASK;
+		header[i++] = (uint8_t) (size >> 8);
+		header[i++] = (uint8_t) (size & 0xFF);
     } else {
-        socket_client->write((uint8_t) size | WS_MASK);
+		header[i++] = (uint8_t) size | WS_MASK;
     }
 
-    mask[0] = random(0, 256);
-    mask[1] = random(0, 256);
-    mask[2] = random(0, 256);
-    mask[3] = random(0, 256);
-    
-    socket_client->write(mask[0]);
-    socket_client->write(mask[1]);
-    socket_client->write(mask[2]);
-    socket_client->write(mask[3]);
-     
-    for (int i=0; i<size; ++i) {
-        socket_client->write(str[i] ^ mask[i % 4]);
-    }
+	int mask_base = i;
+    header[i++] = random(0, 256);
+    header[i++] = random(0, 256);
+    header[i++] = random(0, 256);
+    header[i++] = random(0, 256);
+
+	if(socket_client->write(header, i)) {
+		for (int j=0; j<size; ++j) {
+			socket_client->write(str[j] ^ header[mask_base + (j % 4)]);
+		}
+    } 
 }
 
 void WebSocketClient::sendEncodedData(String str, uint8_t opcode) {
