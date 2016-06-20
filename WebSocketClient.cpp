@@ -145,31 +145,21 @@ bool WebSocketClient::analyzeRequest() {
     return serverKey.equals(String(b64Result));
 }
 
-
-bool WebSocketClient::handleStream(String& data, uint8_t *opcode) {
-    uint8_t msgtype;
-    uint8_t bite;
-    unsigned int length;
-    uint8_t mask[4];
-    uint8_t index;
-    unsigned int i;
-    bool hasMask = false;
-
-    if (!socket_client->connected() || !socket_client->available())
-    {
+bool WebSocketClient::handleMessageHeader(uint8_t *msgtype, unsigned int *length, bool *hasMask, uint8_t *mask, uint8_t *opcode) {
+    if (!socket_client->connected() || !socket_client->available()) {
         return false;
     }      
 
-    msgtype = timedRead();
+    *msgtype = timedRead();
     if (!socket_client->connected()) {
         return false;
     }
 
-    length = timedRead();
+    *length = timedRead();
 
-    if (length & WS_MASK) {
-        hasMask = true;
-        length = length & ~WS_MASK;
+    if (*length & WS_MASK) {
+        *hasMask = true;
+        *length = *length & ~WS_MASK;
     }
 
 
@@ -177,27 +167,25 @@ bool WebSocketClient::handleStream(String& data, uint8_t *opcode) {
         return false;
     }
 
-    index = 6;
-
-    if (length == WS_SIZE16) {
-        length = timedRead() << 8;
+    if (*length == WS_SIZE16) {
+        *length = timedRead() << 8;
         if (!socket_client->connected()) {
             return false;
         }
             
-        length |= timedRead();
+        *length |= timedRead();
         if (!socket_client->connected()) {
             return false;
         }   
 
-    } else if (length == WS_SIZE64) {
+    } else if (*length == WS_SIZE64) {
 #ifdef DEBUGGING
         Serial.println(F("No support for over 16 bit sized messages"));
 #endif
         return false;
     }
 
-    if (hasMask) {
+    if (*hasMask) {
         // get the mask
         mask[0] = timedRead();
         if (!socket_client->connected()) {
@@ -220,23 +208,34 @@ bool WebSocketClient::handleStream(String& data, uint8_t *opcode) {
             return false;
         }
     }
-        
-    data = "";
-        
+              
     if (opcode != NULL)
     {
-      *opcode = msgtype & ~WS_FIN;
+      *opcode = *msgtype & ~WS_FIN;
     }
-                
+	
+	return true;
+}
+
+bool WebSocketClient::handleStream(String& data, uint8_t *opcode) {
+    uint8_t msgtype;
+    unsigned int length;
+    uint8_t mask[4];
+    bool hasMask = false;
+
+	if(!handleMessageHeader(&msgtype, &length, &hasMask, mask, opcode)) return false;	
+	    
+    data = "";
+        
     if (hasMask) {
-        for (i=0; i<length; ++i) {
+        for (int i=0; i<length; ++i) {
             data += (char) (timedRead() ^ mask[i % 4]);
             if (!socket_client->connected()) {
                 return false;
             }
         }
     } else {
-        for (i=0; i<length; ++i) {
+        for (int i=0; i<length; ++i) {
             data += (char) timedRead();
             if (!socket_client->connected()) {
                 return false;
@@ -244,6 +243,35 @@ bool WebSocketClient::handleStream(String& data, uint8_t *opcode) {
         }            
     }
     
+    return true;
+}
+
+bool WebSocketClient::handleStream(char *data, unsigned int dataLen, uint8_t *opcode) {
+    uint8_t msgtype;
+    unsigned int length;
+    uint8_t mask[4];
+    bool hasMask = false;
+
+	if(!handleMessageHeader(&msgtype, &length, &hasMask, mask, opcode)) return false;	
+	
+	int i;
+	int limit = length>dataLen?dataLen:length;
+    if (hasMask) {
+        for (i=0; i<limit; ++i) {
+            data[i] = (char) (timedRead() ^ mask[i % 4]);
+            if (!socket_client->connected()) {
+                return false;
+            }
+        }
+    } else {
+        for (i=0; i<limit; ++i) {
+            data[i] = (char) timedRead();
+            if (!socket_client->connected()) {
+                return false;
+            }
+        }            
+    }
+    data[i] = '\0';
     return true;
 }
 
@@ -266,6 +294,10 @@ int WebSocketClient::connected(void) {
 
 bool WebSocketClient::getData(String& data, uint8_t *opcode) {
     return handleStream(data, opcode);
+}    
+
+bool WebSocketClient::getData(char *data, unsigned int dataLen, uint8_t *opcode) {
+    return handleStream(data, dataLen, opcode);
 }    
 
 void WebSocketClient::sendData(const char *str, uint8_t opcode) {
@@ -304,10 +336,9 @@ void WebSocketClient::sendEncodedData(char *str, uint8_t opcode) {
     uint8_t header[8];
     int size = strlen(str);
 	int i = 0;
-
+	
     // Opcode; final fragment
 	header[i++] = opcode | WS_FIN;
-    //socket_client->write(opcode | WS_FIN);
 
     // NOTE: no support for > 16-bit sized messages
     if (size > 125) {
