@@ -99,6 +99,8 @@ public:
     void sendData(const char *str, uint8_t opcode = WS_OPCODE_TEXT);
     void sendData(String str, uint8_t opcode = WS_OPCODE_TEXT);
 
+	void disconnect(void) {disconnectStream();};
+	
     char *path;
     char *host;
     char *protocol;
