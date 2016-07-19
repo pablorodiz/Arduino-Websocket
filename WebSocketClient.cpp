@@ -8,6 +8,11 @@
 
 char *WebSocketClient::headers = NULL;
 
+#ifdef WS_BUFFERED_SEND	
+uint8_t WebSocketClient::buffer[MAX_FRAME_LENGTH];
+unsigned int WebSocketClient::bufferIndex = 0; 
+#endif
+
 bool WebSocketClient::handshake(Client &client) {
 
     socket_client = &client;
@@ -332,11 +337,38 @@ int WebSocketClient::timedRead() {
   return socket_client->read();
 }
 
+#ifdef WS_BUFFERED_SEND
+int WebSocketClient::bufferedSend(uint8_t c) {
+	if(bufferIndex<MAX_FRAME_LENGTH) { //Add byte to buffer if space available
+		 buffer[bufferIndex++] = c;
+		 return 1;
+	} else { //Buffer is full
+		if(process()) {
+			buffer[bufferIndex++] = c;
+			return 1;
+		} else return 0;
+	}
+}
+int WebSocketClient::process(void) {
+	if(bufferIndex>0) {
+		lastSend = millis();
+		if(socket_client->write(buffer, bufferIndex)) {
+			bufferIndex = 0;
+			return 1;
+		} else {
+			//Error sending. Most probable thing is socket disconnection
+			//Serial.println("######################################################################SEND FAILED");
+			return 0;
+		}
+	}
+}
+#endif
+
 void WebSocketClient::sendEncodedData(char *str, uint8_t opcode) {
     uint8_t header[8];
     int size = strlen(str);
 	int i = 0;
-	
+
     // Opcode; final fragment
 	header[i++] = opcode | WS_FIN;
 
@@ -355,11 +387,16 @@ void WebSocketClient::sendEncodedData(char *str, uint8_t opcode) {
     header[i++] = random(0, 256);
     header[i++] = random(0, 256);
 
+#ifdef WS_BUFFERED_SEND	
+	for(int k=0; k<i; k++) if(!bufferedSend(header[k])) break;
+	for(int k=0; k<size; k++) if(!bufferedSend(str[k] ^ header[mask_base + (k % 4)])) break;
+#else	
 	if(socket_client->write(header, i)) {
 		for (int j=0; j<size; ++j) {
 			socket_client->write(str[j] ^ header[mask_base + (j % 4)]);
 		}
-    } 
+    }
+#endif /*WS_BUFFERED_SEND*/	
 }
 
 void WebSocketClient::sendEncodedData(String str, uint8_t opcode) {

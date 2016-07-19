@@ -48,6 +48,10 @@ http://tools.ietf.org/html/draft-hixie-thewebsocketprotocol-75
 #include "String.h"
 #include "Client.h"
 
+#ifdef ESP8266
+#define WS_BUFFERED_SEND
+#endif
+
 // CRLF characters to terminate lines/handshakes in headers.
 #define CRLF "\r\n"
 
@@ -64,7 +68,11 @@ http://tools.ietf.org/html/draft-hixie-thewebsocketprotocol-75
 // Don't allow the client to send big frames of data. This will flood the Arduinos
 // memory and might even crash it.
 #ifndef MAX_FRAME_LENGTH
+#ifdef ESP8266
+#define MAX_FRAME_LENGTH 2048
+#else
 #define MAX_FRAME_LENGTH 256
+#endif
 #endif
 
 #define SIZE(array) (sizeof(array) / sizeof(*array))
@@ -99,6 +107,10 @@ public:
     void sendData(const char *str, uint8_t opcode = WS_OPCODE_TEXT);
     void sendData(String str, uint8_t opcode = WS_OPCODE_TEXT);
 
+#ifdef WS_BUFFERED_SEND
+	int process(void);
+#endif	
+
 	void disconnect(void) {disconnectStream();};
 	
     char *path;
@@ -108,9 +120,14 @@ public:
 
 private:
     Client *socket_client;
-    unsigned long _startMillis;
-
+	
     const char *socket_urlPrefix;
+
+#ifdef WS_BUFFERED_SEND
+	static uint8_t buffer[MAX_FRAME_LENGTH];
+	static unsigned int bufferIndex; 
+	int bufferedSend(uint8_t c);
+#endif	
 
     // Discovers if the client's header is requesting an upgrade to a
     // websocket connection.
