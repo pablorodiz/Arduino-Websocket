@@ -351,7 +351,6 @@ int WebSocketClient::bufferedSend(uint8_t c) {
 }
 int WebSocketClient::process(void) {
 	if(bufferIndex>0) {
-		lastSend = millis();
 		if(socket_client->write(buffer, bufferIndex)) {
 			bufferIndex = 0;
 			return 1;
