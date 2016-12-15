@@ -9,7 +9,7 @@
 #endif
 
 #include "sha1.h"
-#include "base64.h"
+#include "Base64.h"
 
 
 bool WebSocketServer::handshake(Client &client) {
