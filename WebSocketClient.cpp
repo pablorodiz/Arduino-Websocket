@@ -381,10 +381,10 @@ void WebSocketClient::sendEncodedData(char *str, uint8_t opcode) {
     }
 
 	int mask_base = i;
-    header[i++] = random(0, 256);
-    header[i++] = random(0, 256);
-    header[i++] = random(0, 256);
-    header[i++] = random(0, 256);
+    header[i++] = random(0, 127);
+    header[i++] = random(0, 127);
+    header[i++] = random(0, 127);
+    header[i++] = random(0, 127);
 
 #ifdef WS_BUFFERED_SEND	
 	for(int k=0; k<i; k++) if(!bufferedSend(header[k])) break;
