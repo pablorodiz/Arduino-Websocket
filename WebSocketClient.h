@@ -48,7 +48,7 @@ http://tools.ietf.org/html/draft-hixie-thewebsocketprotocol-75
 #include "string.h"
 #include "Client.h"
 
-#ifdef ESP8266
+#if defined ESP8266 || defined ARDUINO_SAMD_MKR1000
 #define WS_BUFFERED_SEND
 #endif
 
@@ -68,11 +68,13 @@ http://tools.ietf.org/html/draft-hixie-thewebsocketprotocol-75
 // Don't allow the client to send big frames of data. This will flood the Arduinos
 // memory and might even crash it.
 #ifndef MAX_FRAME_LENGTH
-#ifdef ESP8266
+
+#if defined ESP8266 || defined ARDUINO_SAMD_MKR1000
 #define MAX_FRAME_LENGTH 2048
 #else
 #define MAX_FRAME_LENGTH 256
 #endif
+
 #endif
 
 #define SIZE(array) (sizeof(array) / sizeof(*array))
