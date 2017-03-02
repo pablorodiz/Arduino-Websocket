@@ -6,12 +6,31 @@
 #include "sha1.h"
 #include "Base64.h"
 
-char *WebSocketClient::headers = NULL;
+//char *WebSocketClient::headers = NULL;
 
+WebSocketClient::WebSocketClient(char *WsPath, char *WsHost, char *WsHeaders, char *WsProtocol){
+	path = WsPath;
+	host = WsHost;
+	headers = WsHeaders;
+	protocol = WsProtocol;
 #ifdef WS_BUFFERED_SEND	
-uint8_t WebSocketClient::buffer[MAX_FRAME_LENGTH];
-unsigned int WebSocketClient::bufferIndex = 0; 
+	bufferIndex = 0;
 #endif
+}
+
+void WebSocketClient::setHost(char* WsHost) {
+	host = WsHost;
+}
+void WebSocketClient::setProtocol(char* WsProtocol) {
+	protocol = WsProtocol;
+}
+void WebSocketClient::setPath(char* WsPath) {
+	path = WsPath;
+}
+void WebSocketClient::setHeaders(char* WsHeaders) {
+	headers = WsHeaders;
+}
+
 
 bool WebSocketClient::handshake(Client &client) {
 
@@ -86,9 +105,11 @@ bool WebSocketClient::analyzeRequest() {
     socket_client->print(F("Sec-WebSocket-Key: "));
     socket_client->print(key);
     socket_client->print(CRLF);
-    socket_client->print(F("Sec-WebSocket-Protocol: "));
-    socket_client->print(protocol);
-    socket_client->print(CRLF);
+	if(protocol!=NULL) {
+		socket_client->print(F("Sec-WebSocket-Protocol: "));
+		socket_client->print(protocol);
+		socket_client->print(CRLF);
+	}	
     socket_client->print(F("Sec-WebSocket-Version: 13\r\n"));
     socket_client->print(CRLF);
 
@@ -102,7 +123,9 @@ bool WebSocketClient::analyzeRequest() {
         Serial.println("Waiting...");
 #endif
     }
-
+#ifdef DEBUGGING
+	if(!socket_client->connected()) Serial.println("Error. Broken connection");
+#endif
     // TODO: More robust string extraction
     while ((bite = socket_client->read()) != -1) {
 

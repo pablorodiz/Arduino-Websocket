@@ -48,6 +48,8 @@ http://tools.ietf.org/html/draft-hixie-thewebsocketprotocol-75
 #include "string.h"
 #include "Client.h"
 
+#define DEBUGGING
+
 #if defined ESP8266 || defined ARDUINO_SAMD_MKR1000
 #define WS_BUFFERED_SEND
 #endif
@@ -95,7 +97,11 @@ http://tools.ietf.org/html/draft-hixie-thewebsocketprotocol-75
   
 class WebSocketClient {
 public:
-
+	WebSocketClient(char *WsPath = NULL, char *WsHost = NULL, char *WsHeaders = NULL, char *WsProtocol = NULL);
+	void setPath(char* WsPath);
+	void setHeaders(char *WsHeaders);
+	void setHost(char * WsHost);
+	void setProtocol(char * WsProtocol);
     // Handle connection requests to validate and process/refuse
     // connections.
     bool handshake(Client &client);
@@ -115,19 +121,19 @@ public:
 
 	void disconnect(void) {disconnectStream();};
 	
-    char *path;
-    char *host;
-    char *protocol;
-	static char *headers;
 
 private:
     Client *socket_client;
 	
     const char *socket_urlPrefix;
+    char *path;
+    char *host;
+    char *protocol;
+	char *headers;
 
 #ifdef WS_BUFFERED_SEND
-	static uint8_t buffer[MAX_FRAME_LENGTH];
-	static unsigned int bufferIndex; 
+	uint8_t buffer[MAX_FRAME_LENGTH];
+	unsigned int bufferIndex; 
 	int bufferedSend(uint8_t c);
 #endif	
 
