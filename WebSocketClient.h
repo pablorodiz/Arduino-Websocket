@@ -48,7 +48,8 @@ http://tools.ietf.org/html/draft-hixie-thewebsocketprotocol-75
 #include "string.h"
 #include "Client.h"
 
-#define DEBUGGING
+//Uncoment the following line for debug output ot serial port
+//#define DEBUGGING
 
 #if defined ESP8266 || defined ARDUINO_SAMD_MKR1000
 #define WS_BUFFERED_SEND
@@ -104,7 +105,7 @@ public:
 	void setProtocol(char * WsProtocol);
     // Handle connection requests to validate and process/refuse
     // connections.
-    bool handshake(Client &client);
+    int handshake(Client &client);
     //Check if socket os connected
 	int connected();
     // Get data off of the stream
@@ -139,7 +140,7 @@ private:
 
     // Discovers if the client's header is requesting an upgrade to a
     // websocket connection.
-    bool analyzeRequest();
+    int analyzeRequest();
 
 	bool handleMessageHeader(uint8_t *msgtype, unsigned int *length, bool *hasMask, uint8_t *mask, uint8_t *opcode);
 

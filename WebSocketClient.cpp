@@ -32,7 +32,7 @@ void WebSocketClient::setHeaders(char* WsHeaders) {
 }
 
 
-bool WebSocketClient::handshake(Client &client) {
+int WebSocketClient::handshake(Client &client) {
 
     socket_client = &client;
 
@@ -42,12 +42,13 @@ bool WebSocketClient::handshake(Client &client) {
 #ifdef DEBUGGING
             Serial.println(F("Client connected"));
 #endif
-        if (analyzeRequest()) {
+		int res = analyzeRequest();
+        if (res==200) {
 #ifdef DEBUGGING
                 Serial.println(F("Websocket established"));
 #endif
 
-                return true;
+                return res;
 
         } else {
             // Might just need to break until out of socket_client loop.
@@ -56,19 +57,21 @@ bool WebSocketClient::handshake(Client &client) {
 #endif
             disconnectStream();
 
-            return false;
+            return res;
         }
     } else {
-        return false;
+        return -1;
     }
 }
 
-bool WebSocketClient::analyzeRequest() {
+int WebSocketClient::analyzeRequest() {
     String temp;
 
     int bite;
     bool foundupgrade = false;
     unsigned long intkey[2];
+	String sAnswerCode;
+	int answerCode=0;
     String serverKey;
     char keyStart[17];
     char b64Key[25];
@@ -130,7 +133,6 @@ bool WebSocketClient::analyzeRequest() {
     while ((bite = socket_client->read()) != -1) {
 
         temp += (char)bite;
-
         if ((char)bite == '\n') {
 			if(temp.startsWith("\r\n")) {
 #ifdef DEBUGGING
@@ -141,6 +143,13 @@ bool WebSocketClient::analyzeRequest() {
 				foundupgrade = true;
 			} else if (temp.startsWith("Sec-WebSocket-Accept: ")) {
 				serverKey = temp.substring(22,temp.length() - 2); // Don't save last CR+LF
+			} else if(temp.startsWith("HTTP/1.1 ")){
+				sAnswerCode = temp.substring(9,12);
+				answerCode = atoi(&sAnswerCode[0]);
+#ifdef DEBUGGING
+				Serial.print("Answer Code: ");
+				Serial.println(answerCode);
+#endif
 			} 
 #ifdef DEBUGGING
 			Serial.print("Got Header: " + temp);
@@ -170,7 +179,8 @@ bool WebSocketClient::analyzeRequest() {
     base64_encode(b64Result, result, 20);
 
     // if the keys match, good to go
-    return serverKey.equals(String(b64Result));
+	if (answerCode!=0 && serverKey.equals(String(b64Result))||answerCode!=200) return answerCode;
+    else return -1;
 }
 
 bool WebSocketClient::handleMessageHeader(uint8_t *msgtype, unsigned int *length, bool *hasMask, uint8_t *mask, uint8_t *opcode) {
