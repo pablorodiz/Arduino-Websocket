@@ -6,8 +6,6 @@
 #include "sha1.h"
 #include "Base64.h"
 
-//char *WebSocketClient::headers = NULL;
-
 WebSocketClient::WebSocketClient(char *WsPath, char *WsHost, char *WsHeaders, char *WsProtocol){
 	path = WsPath;
 	host = WsHost;
@@ -43,7 +41,7 @@ int WebSocketClient::handshake(Client &client) {
             Serial.println(F("Client connected"));
 #endif
 		int res = analyzeRequest();
-        if (res==200) {
+        if (res==101) {
 #ifdef DEBUGGING
                 Serial.println(F("Websocket established"));
 #endif
@@ -92,7 +90,7 @@ int WebSocketClient::analyzeRequest() {
 #ifdef DEBUGGING
     Serial.println(F("Sending websocket upgrade headers"));
 #endif    
-
+#ifndef WS_BUFFERED_SEND
     socket_client->print(F("GET "));
     socket_client->print(path);
     socket_client->print(F(" HTTP/1.1\r\n"));
@@ -100,22 +98,78 @@ int WebSocketClient::analyzeRequest() {
     socket_client->print(F("Connection: Upgrade\r\n"));
     socket_client->print(F("Host: "));
     socket_client->print(host);
-    socket_client->print(CRLF); 
+    socket_client->print(F(CRLF)); 
 	if(headers) {
 		socket_client->print(headers);
-		socket_client->print(CRLF);
+		socket_client->print(F(CRLF));
 	}	
     socket_client->print(F("Sec-WebSocket-Key: "));
     socket_client->print(key);
-    socket_client->print(CRLF);
+    socket_client->print(F(CRLF));
 	if(protocol!=NULL) {
 		socket_client->print(F("Sec-WebSocket-Protocol: "));
 		socket_client->print(protocol);
-		socket_client->print(CRLF);
+		socket_client->print(F(CRLF));
 	}	
     socket_client->print(F("Sec-WebSocket-Version: 13\r\n"));
-    socket_client->print(CRLF);
+    socket_client->print(F(CRLF));
+#else
+	bufferIndex = 0;
+	strcpy_P((char *)&buffer[bufferIndex],(const char *)F("GET "));
+	bufferIndex+=4;
+	strcpy((char *)&buffer[bufferIndex],path);
+	bufferIndex+=strlen(path);
+    strcpy_P((char *)&buffer[bufferIndex],(const char *)F(" HTTP/1.1\r\n"));
+	bufferIndex+=11;
+    strcpy_P((char *)&buffer[bufferIndex],(const char *)F("Upgrade: websocket\r\n"));
+	bufferIndex+=20;
+    strcpy_P((char *)&buffer[bufferIndex],(const char *)F("Connection: Upgrade\r\n"));
+	bufferIndex+=21;
+    strcpy_P((char *)&buffer[bufferIndex],(const char *)F("Host: "));
+	bufferIndex+=6;
+    strcpy((char *)&buffer[bufferIndex],host);
+	bufferIndex+=strlen(host);
+    strcpy_P((char *)&buffer[bufferIndex],(const char *)F(CRLF));
+	bufferIndex+=2;	
+	if(headers) {
+		strcpy((char *)&buffer[bufferIndex],headers);
+		bufferIndex+=strlen(headers);
+		strcpy_P((char *)&buffer[bufferIndex],(const char *)F(CRLF));
+		bufferIndex+=2;	
+	}	
+    strcpy_P((char *)&buffer[bufferIndex],(const char *)F("Sec-WebSocket-Key: "));
+	bufferIndex+=19;	
+    strcpy((char *)&buffer[bufferIndex],&key[0]);
+	bufferIndex+=key.length();
+	strcpy_P((char *)&buffer[bufferIndex],(const char *)F(CRLF));
+	bufferIndex+=2;	
+	if(protocol!=NULL) {
+		strcpy_P((char *)&buffer[bufferIndex],(const char *)F("Sec-WebSocket-Protocol: "));
+		bufferIndex+=24;
+		strcpy((char *)&buffer[bufferIndex],protocol);
+		bufferIndex+=strlen(protocol);
+		strcpy_P((char *)&buffer[bufferIndex],(const char *)F(CRLF));
+		bufferIndex+=2;	
+	}	
+    strcpy_P((char *)&buffer[bufferIndex],(const char *)F("Sec-WebSocket-Version: 13\r\n"));
+	bufferIndex+=27;	
+	strcpy_P((char *)&buffer[bufferIndex],(const char *)F(CRLF));
+	bufferIndex+=2;
+	if(socket_client->write(buffer, bufferIndex)){
+#ifdef DEBUGGING
+		Serial.print("Sending: ");
+		int i;
+		for(i=0; i<bufferIndex; i++) Serial.write(buffer[i]);
+		bufferIndex = 0;
+#endif		
+	} else {
+#ifdef DEBUGGING
+		Serial.println("Error Sending");
+#endif		
+		return -1;
+	}
 
+#endif
 #ifdef DEBUGGING
     Serial.println(F("Analyzing response headers"));
 #endif    
@@ -144,7 +198,9 @@ int WebSocketClient::analyzeRequest() {
 			} else if (temp.startsWith("Sec-WebSocket-Accept: ")) {
 				serverKey = temp.substring(22,temp.length() - 2); // Don't save last CR+LF
 			} else if(temp.startsWith("HTTP/1.1 ")){
-				sAnswerCode = temp.substring(9,12);
+				int i;
+				for(i=9; i< temp.length(); i++) if (!isDigit(temp[i])) break;
+				sAnswerCode = temp.substring(9,i);
 				answerCode = atoi(&sAnswerCode[0]);
 #ifdef DEBUGGING
 				Serial.print("Answer Code: ");
@@ -179,7 +235,7 @@ int WebSocketClient::analyzeRequest() {
     base64_encode(b64Result, result, 20);
 
     // if the keys match, good to go
-	if (answerCode!=0 && serverKey.equals(String(b64Result))||answerCode!=200) return answerCode;
+	if (answerCode==101 && serverKey.equals(String(b64Result)) || answerCode!=101 && answerCode!=0) return answerCode;
     else return -1;
 }
 
@@ -385,6 +441,12 @@ int WebSocketClient::bufferedSend(uint8_t c) {
 int WebSocketClient::process(void) {
 	if(bufferIndex>0) {
 		if(socket_client->write(buffer, bufferIndex)) {
+#ifdef DEBUGGING
+			Serial.print("Sending: ");
+			int i;
+			for (i=0; i<bufferIndex; i++) Serial.write(buffer[bufferIndex]);
+			Serial.println();
+#endif			
 			bufferIndex = 0;
 			return 1;
 		} else {
@@ -412,7 +474,15 @@ void WebSocketClient::sendEncodedData(char *str, uint8_t opcode) {
     } else {
 		header[i++] = (uint8_t) size | WS_MASK;
     }
-
+#ifdef DEBUGGING
+	Serial.print("Sending message. Header: ");
+	int j;
+	for(j=0; j<i; j++){
+		Serial.println(header[i]);
+		Serial.print(" ");
+	}	
+	Serial.println();
+#endif
 	int mask_base = i;
     header[i++] = random(0, 127);
     header[i++] = random(0, 127);
@@ -420,14 +490,30 @@ void WebSocketClient::sendEncodedData(char *str, uint8_t opcode) {
     header[i++] = random(0, 127);
 
 #ifdef WS_BUFFERED_SEND	
-	for(int k=0; k<i; k++) if(!bufferedSend(header[k])) break;
-	for(int k=0; k<size; k++) if(!bufferedSend(str[k] ^ header[mask_base + (k % 4)])) break;
+	for(int k=0; k<i; k++) {
+		if(!bufferedSend(header[k])) break;
+	}
+	for(int k=0; k<size; k++) {
+		char c = str[k] ^ header[mask_base + (k % 4)];
+		if(!bufferedSend(c)) break;
+	}
 #else	
+#ifdef DEBUGGING
+	Serial.print("Sending: ");
+	for(int k=0; k<i; k++) Serial.write(header[k]);
+#endif
 	if(socket_client->write(header, i)) {
 		for (int j=0; j<size; ++j) {
-			socket_client->write(str[j] ^ header[mask_base + (j % 4)]);
+			char c = str[j] ^ header[mask_base + (j % 4)];
+#ifdef DEBUGGING
+			Serial.write(c);
+#endif			
+			socket_client->write(c);
 		}
     }
+#ifdef DEBUGGING
+	Serial.println();
+#endif
 #endif /*WS_BUFFERED_SEND*/	
 }
 
