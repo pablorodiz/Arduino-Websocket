@@ -160,8 +160,8 @@ int WebSocketClient::analyzeRequest() {
 		Serial.print("Sending: ");
 		int i;
 		for(i=0; i<bufferIndex; i++) Serial.write(buffer[i]);
-		bufferIndex = 0;
 #endif		
+		bufferIndex = 0;
 	} else {
 #ifdef DEBUGGING
 		Serial.println("Error Sending");
@@ -422,8 +422,13 @@ int WebSocketClient::timedRead() {
   while (!socket_client->available()) {
     delay(20);  
   }
-
+#ifdef DEBUGGING
+  char c = socket_client->read();
+  Serial.println(c);
+  return c;
+#else  
   return socket_client->read();
+#endif
 }
 
 #ifdef WS_BUFFERED_SEND
