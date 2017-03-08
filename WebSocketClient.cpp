@@ -443,15 +443,10 @@ int WebSocketClient::bufferedSend(uint8_t c) {
 		} else return 0;
 	}
 }
+
 int WebSocketClient::process(void) {
 	if(bufferIndex>0) {
 		if(socket_client->write(buffer, bufferIndex)) {
-#ifdef DEBUGGING
-			Serial.print("Sending: ");
-			int i;
-			for (i=0; i<bufferIndex; i++) Serial.write(buffer[bufferIndex]);
-			Serial.println();
-#endif			
 			bufferIndex = 0;
 			return 1;
 		} else {
@@ -495,14 +490,23 @@ void WebSocketClient::sendEncodedData(char *str, uint8_t opcode) {
     header[i++] = random(0, 127);
 
 #ifdef WS_BUFFERED_SEND	
+#ifdef DEBUGGING
+	Serial.print("Sending: ");
+#endif
 	for(int k=0; k<i; k++) {
 		if(!bufferedSend(header[k])) break;
+#ifdef DEBUGGING
+		Serial.write(header[k]);
+#endif			
 	}
 	for(int k=0; k<size; k++) {
 		char c = str[k] ^ header[mask_base + (k % 4)];
 		if(!bufferedSend(c)) break;
+#ifdef DEBUGGING
+		Serial.write(c);
+#endif			
 	}
-#else	
+#else /*WS_BUFFERED_SEND*/
 #ifdef DEBUGGING
 	Serial.print("Sending: ");
 	for(int k=0; k<i; k++) Serial.write(header[k]);
