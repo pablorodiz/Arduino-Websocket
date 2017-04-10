@@ -115,45 +115,45 @@ int WebSocketClient::analyzeRequest() {
     socket_client->print(F(CRLF));
 #else
 	bufferIndex = 0;
-	strcpy_P((char *)&buffer[bufferIndex],(const char *)F("GET "));
+	strncpy_P((char *)&buffer[bufferIndex],(const char *)F("GET "), 4);
 	bufferIndex+=4;
 	strcpy((char *)&buffer[bufferIndex],path);
 	bufferIndex+=strlen(path);
-    strcpy_P((char *)&buffer[bufferIndex],(const char *)F(" HTTP/1.1\r\n"));
+    strncpy_P((char *)&buffer[bufferIndex],(const char *)F(" HTTP/1.1\r\n"), 11);
 	bufferIndex+=11;
-    strcpy_P((char *)&buffer[bufferIndex],(const char *)F("Upgrade: websocket\r\n"));
+    strncpy_P((char *)&buffer[bufferIndex],(const char *)F("Upgrade: websocket\r\n"), 20);
 	bufferIndex+=20;
-    strcpy_P((char *)&buffer[bufferIndex],(const char *)F("Connection: Upgrade\r\n"));
+    strncpy_P((char *)&buffer[bufferIndex],(const char *)F("Connection: Upgrade\r\n"), 21);
 	bufferIndex+=21;
-    strcpy_P((char *)&buffer[bufferIndex],(const char *)F("Host: "));
+    strncpy_P((char *)&buffer[bufferIndex],(const char *)F("Host: "), 6);
 	bufferIndex+=6;
     strcpy((char *)&buffer[bufferIndex],host);
 	bufferIndex+=strlen(host);
-    strcpy_P((char *)&buffer[bufferIndex],(const char *)F(CRLF));
+    strncpy_P((char *)&buffer[bufferIndex],(const char *)F(CRLF), 2);
 	bufferIndex+=2;	
 	if(headers) {
 		strcpy((char *)&buffer[bufferIndex],headers);
 		bufferIndex+=strlen(headers);
-		strcpy_P((char *)&buffer[bufferIndex],(const char *)F(CRLF));
+		strncpy_P((char *)&buffer[bufferIndex],(const char *)F(CRLF), 2);
 		bufferIndex+=2;	
 	}	
-    strcpy_P((char *)&buffer[bufferIndex],(const char *)F("Sec-WebSocket-Key: "));
+    strncpy_P((char *)&buffer[bufferIndex],(const char *)F("Sec-WebSocket-Key: "), 19);
 	bufferIndex+=19;	
     strcpy((char *)&buffer[bufferIndex],&key[0]);
 	bufferIndex+=key.length();
-	strcpy_P((char *)&buffer[bufferIndex],(const char *)F(CRLF));
+	strncpy_P((char *)&buffer[bufferIndex],(const char *)F(CRLF), 2);
 	bufferIndex+=2;	
 	if(protocol!=NULL) {
-		strcpy_P((char *)&buffer[bufferIndex],(const char *)F("Sec-WebSocket-Protocol: "));
+		strncpy_P((char *)&buffer[bufferIndex],(const char *)F("Sec-WebSocket-Protocol: "), 24);
 		bufferIndex+=24;
 		strcpy((char *)&buffer[bufferIndex],protocol);
 		bufferIndex+=strlen(protocol);
-		strcpy_P((char *)&buffer[bufferIndex],(const char *)F(CRLF));
+		strncpy_P((char *)&buffer[bufferIndex],(const char *)F(CRLF), 2);
 		bufferIndex+=2;	
 	}	
-    strcpy_P((char *)&buffer[bufferIndex],(const char *)F("Sec-WebSocket-Version: 13\r\n"));
+    strncpy_P((char *)&buffer[bufferIndex],(const char *)F("Sec-WebSocket-Version: 13\r\n"), 27);
 	bufferIndex+=27;	
-	strcpy_P((char *)&buffer[bufferIndex],(const char *)F(CRLF));
+	strncpy_P((char *)&buffer[bufferIndex],(const char *)F(CRLF), 2);
 	bufferIndex+=2;
 	if(socket_client->write(buffer, bufferIndex)){
 #ifdef DEBUGGING
@@ -478,7 +478,7 @@ void WebSocketClient::sendEncodedData(char *str, uint8_t opcode) {
 	Serial.print("Sending message. Header: ");
 	int j;
 	for(j=0; j<i; j++){
-		Serial.println(header[i]);
+		Serial.print(header[j]);
 		Serial.print(" ");
 	}	
 	Serial.println();

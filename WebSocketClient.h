@@ -51,7 +51,7 @@ http://tools.ietf.org/html/draft-hixie-thewebsocketprotocol-75
 //Uncoment the following line for debug output ot serial port
 //#define DEBUGGING
 
-#if defined ESP8266 || defined ARDUINO_SAMD_MKR1000
+#if defined ESP8266 || defined ESP32 || defined ARDUINO_SAMD_MKR1000
 #define WS_BUFFERED_SEND
 #endif
 
@@ -72,7 +72,7 @@ http://tools.ietf.org/html/draft-hixie-thewebsocketprotocol-75
 // memory and might even crash it.
 #ifndef MAX_FRAME_LENGTH
 
-#if defined ESP8266 || defined ARDUINO_SAMD_MKR1000
+#if defined ESP8266 || defined ESP32 || defined ARDUINO_SAMD_MKR1000
 #define MAX_FRAME_LENGTH 2048
 #else
 #define MAX_FRAME_LENGTH 256
