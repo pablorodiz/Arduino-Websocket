@@ -58,11 +58,11 @@ http://tools.ietf.org/html/draft-hixie-thewebsocketprotocol-75
 // CRLF characters to terminate lines/handshakes in headers.
 #define CRLF "\r\n"
 
-// Amount of time (in ms) a user may be connected before getting disconnected 
+// Amount of time (in ms) a user may be connected before getting disconnected
 // for timing out (i.e. not sending any data to the server).
 #define TIMEOUT_IN_MS 10000
 
-// ACTION_SPACE is how many actions are allowed in a program. Defaults to 
+// ACTION_SPACE is how many actions are allowed in a program. Defaults to
 // 5 unless overwritten by user.
 #ifndef CALLBACK_FUNCTIONS
 #define CALLBACK_FUNCTIONS 1
@@ -95,14 +95,14 @@ http://tools.ietf.org/html/draft-hixie-thewebsocketprotocol-75
 #define WS_SIZE16         126
 #define WS_SIZE64         127
 
-  
+
 class WebSocketClient {
 public:
-	WebSocketClient(char *WsPath = NULL, char *WsHost = NULL, char *WsHeaders = NULL, char *WsProtocol = NULL);
-	void setPath(char* WsPath);
-	void setHeaders(char *WsHeaders);
-	void setHost(char * WsHost);
-	void setProtocol(char * WsProtocol);
+	WebSocketClient(const char *WsPath = NULL, const char *WsHost = NULL, const char *WsHeaders = NULL, const char *WsProtocol = NULL);
+	void setPath(const char* WsPath);
+	void setHeaders(const char *WsHeaders);
+	void setHost(const char * WsHost);
+	void setProtocol(const char * WsProtocol);
     // Handle connection requests to validate and process/refuse
     // connections.
     int handshake(Client &client);
@@ -118,25 +118,25 @@ public:
 
 #ifdef WS_BUFFERED_SEND
 	int process(void);
-#endif	
+#endif
 
 	void disconnect(void) {disconnectStream();};
-	
+
 
 private:
     Client *socket_client;
-	
+
     const char *socket_urlPrefix;
-    char *path;
-    char *host;
-    char *protocol;
-	char *headers;
+    const char *path;
+    const char *host;
+    const char *protocol;
+	const char *headers;
 
 #ifdef WS_BUFFERED_SEND
 	uint8_t buffer[MAX_FRAME_LENGTH];
-	unsigned int bufferIndex; 
+	unsigned int bufferIndex;
 	int bufferedSend(uint8_t c);
-#endif	
+#endif
 
     // Discovers if the client's header is requesting an upgrade to a
     // websocket connection.
@@ -144,12 +144,12 @@ private:
 
 	bool handleMessageHeader(uint8_t *msgtype, unsigned int *length, bool *hasMask, uint8_t *mask, uint8_t *opcode);
 
-    bool handleStream(String& data, uint8_t *opcode);    
+    bool handleStream(String& data, uint8_t *opcode);
     bool handleStream(char *data, unsigned int dataLen, uint8_t *opcode);
-	
+
     // Disconnect user gracefully.
     void disconnectStream();
-    
+
     int timedRead();
 
     void sendEncodedData(char *str, uint8_t opcode);
