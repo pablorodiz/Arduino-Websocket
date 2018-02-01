@@ -320,7 +320,7 @@ bool WebSocketClient::handleStream(String& data, uint8_t *opcode) {
 	if(!handleMessageHeader(&msgtype, &length, &hasMask, mask, opcode)) return false;
 
     data = "";
-
+    data.reserve(length);
     if (hasMask) {
         for (int i=0; i<length; ++i) {
             data += (char) (timedRead() ^ mask[i % 4]);
@@ -402,11 +402,11 @@ void WebSocketClient::sendData(const char *str, uint8_t opcode) {
 	}
 #endif
     if (socket_client->connected()) {
-        sendEncodedData(str, opcode);
+        sendEncodedData(str, strlen(str), opcode);
     }
 }
 
-void WebSocketClient::sendData(String str, uint8_t opcode) {
+void WebSocketClient::sendData(String const& str, uint8_t opcode) {
 #ifdef DEBUGGING
     if((char)str[0]!=0) {
 		Serial.print(F("Sending data: "));
@@ -414,7 +414,7 @@ void WebSocketClient::sendData(String str, uint8_t opcode) {
 	}
 #endif
     if (socket_client->connected()) {
-        sendEncodedData(str, opcode);
+        sendEncodedData(str.c_str(), str.length(), opcode);
     }
 }
 
@@ -458,9 +458,8 @@ int WebSocketClient::process(void) {
 }
 #endif
 
-void WebSocketClient::sendEncodedData(char *str, uint8_t opcode) {
+void WebSocketClient::sendEncodedData(char const*str, int size, uint8_t opcode) {
     uint8_t header[8];
-    int size = strlen(str);
 	int i = 0;
 
     // Opcode; final fragment
@@ -524,13 +523,4 @@ void WebSocketClient::sendEncodedData(char *str, uint8_t opcode) {
 	Serial.println();
 #endif
 #endif /*WS_BUFFERED_SEND*/
-}
-
-void WebSocketClient::sendEncodedData(String str, uint8_t opcode) {
-    int size = str.length() + 1;
-    char cstr[size];
-
-    str.toCharArray(cstr, size);
-
-    sendEncodedData(cstr, opcode);
 }

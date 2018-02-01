@@ -114,7 +114,7 @@ public:
 
     // Write data to the stream
     void sendData(const char *str, uint8_t opcode = WS_OPCODE_TEXT);
-    void sendData(String str, uint8_t opcode = WS_OPCODE_TEXT);
+    void sendData(String const& str, uint8_t opcode = WS_OPCODE_TEXT);
 
 #ifdef WS_BUFFERED_SEND
 	int process(void);
@@ -152,8 +152,7 @@ private:
 
     int timedRead();
 
-    void sendEncodedData(char *str, uint8_t opcode);
-    void sendEncodedData(String str, uint8_t opcode);
+    void sendEncodedData(char const*str, int length, uint8_t opcode);
 };
 
 
