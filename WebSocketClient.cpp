@@ -312,32 +312,33 @@ bool WebSocketClient::handleMessageHeader(uint8_t *msgtype, unsigned int *length
 }
 
 bool WebSocketClient::handleStream(String& data, uint8_t *opcode) {
-    uint8_t msgtype;
-    unsigned int length;
-    uint8_t mask[4];
-    bool hasMask = false;
+  uint8_t msgtype;
+  unsigned int length;
+  uint8_t mask[4];
+  bool hasMask = false;
 
-	if(!handleMessageHeader(&msgtype, &length, &hasMask, mask, opcode)) return false;
-
-    data = "";
-    data.reserve(length);
-    if (hasMask) {
-        for (int i=0; i<length; ++i) {
-            data += (char) (timedRead() ^ mask[i % 4]);
-            if (!socket_client->connected()) {
-                return false;
-            }
-        }
-    } else {
-        for (int i=0; i<length; ++i) {
-            data += (char) timedRead();
-            if (!socket_client->connected()) {
-                return false;
-            }
-        }
-    }
-
-    return true;
+  if(!handleMessageHeader(&msgtype, &length, &hasMask, mask, opcode)) return false;
+  #ifdef DEBUGGING
+  Serial.printf("Got header: msgtyoe = %d length = %d opcode = %d\n", msgtype, length, opcode);
+  #endif
+  data = "";
+  data.reserve(length);
+  if (hasMask) {
+      for (int i=0; i<length; ++i) {
+          data += (char) (timedRead() ^ mask[i % 4]);
+          if (!socket_client->connected()) {
+              return false;
+          }
+      }
+  } else {
+      for (int i=0; i<length; ++i) {
+          data += (char) timedRead();
+          if (!socket_client->connected()) {
+              return false;
+          }
+      }
+  }
+  return true;
 }
 
 bool WebSocketClient::handleStream(char *data, unsigned int dataLen, uint8_t *opcode) {
@@ -349,6 +350,7 @@ bool WebSocketClient::handleStream(char *data, unsigned int dataLen, uint8_t *op
 	if(!handleMessageHeader(&msgtype, &length, &hasMask, mask, opcode)) return false;
 
 	int i;
+  --dataLen; // save space for terminating 0.
 	int limit = length>dataLen?dataLen:length;
     if (hasMask) {
         for (i=0; i<limit; ++i) {
@@ -446,8 +448,11 @@ int WebSocketClient::bufferedSend(uint8_t c) {
 
 int WebSocketClient::process(void) {
 	if(bufferIndex>0) {
-		if(socket_client->write(buffer, bufferIndex)) {
-			bufferIndex = 0;
+		if(auto sent = socket_client->write(buffer, bufferIndex)) {
+      //not all was sent. we have to shift the buffer:
+      auto remaining = bufferIndex - sent;
+      memmove(buffer, buffer + sent, remaining);
+      bufferIndex = remaining;
 			return 1;
 		} else {
 			//Error sending. Most probable thing is socket disconnection
@@ -474,10 +479,10 @@ void WebSocketClient::sendEncodedData(char const*str, int size, uint8_t opcode) 
 		header[i++] = (uint8_t) size | WS_MASK;
     }
 #ifdef DEBUGGING
-	Serial.print("Sending message. Header: ");
+	Serial.printf("Sending message. %d Header: ", size);
 	int j;
 	for(j=0; j<i; j++){
-		Serial.print(header[j]);
+		Serial.printf("[%d] 0x%x %c\n", j, header[j], header[j]);
 		Serial.print(" ");
 	}
 	Serial.println();
@@ -495,14 +500,14 @@ void WebSocketClient::sendEncodedData(char const*str, int size, uint8_t opcode) 
 	for(int k=0; k<i; k++) {
 		if(!bufferedSend(header[k])) break;
 #ifdef DEBUGGING
-		Serial.write(header[k]);
+		Serial.printf("[%d] Header0x%x %c\n", k, header[k], header[k]);
 #endif
 	}
 	for(int k=0; k<size; k++) {
 		char c = str[k] ^ header[mask_base + (k % 4)];
 		if(!bufferedSend(c)) break;
 #ifdef DEBUGGING
-		Serial.write(c);
+		Serial.printf("[%d] 0x%x %c\n", k, c, c);
 #endif
 	}
 #else /*WS_BUFFERED_SEND*/
